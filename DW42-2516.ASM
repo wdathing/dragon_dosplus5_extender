@@ -858,6 +858,7 @@ nwtb01 	fdb   dwload						; routine for DWLOAD command
 		 	fdb	xschd							; routine for SCHD command
 		 	fdb	xwrite						; routine for WRITE command
 		 	fdb	xscopy						; routine for SCOPY command
+			fdb linkwrk
 
 ; -------------------------------------------------------------------------------------------------------------------------------
 ; Dispatch routines for the new added commands
@@ -923,7 +924,7 @@ mount01	deca									; decrement counter
        	ldb   #$19							; code for MO ERROR
 		 	jmp   syserr						; show error message (syserr)
 vdkok		ldb	<dnum							; pass slot to B
-			bsr	stval							; verify / store new value
+			bsr	linkwrk							; verify / store new value
 			rts									; return
 failvdk	jmp   ioerror						; I/O error message
 
@@ -946,13 +947,13 @@ link01	cmpb	#4								; is new value greater than 4 (DW4)?
 			bhi	link02						; yes, skip test
 			cmpb	<numUni						; equals new drive number the unit number? (mandatory!)
 			bne	numError						; no, show unit error
-link02	bsr	stval							; verify and store new value
+link02	bsr	linkwrk							; verify and store new value
 link03	rts									; return
 
 ; -------------------------------------------------------------------------------------------------------------------------------
 ; Verifies that the new value (B) is not linked to another unit. If good, saves it
 ; -------------------------------------------------------------------------------------------------------------------------------
-stval		ldx	#$00fb						; point one byte before drive/slot table
+linkwrk		ldx	#$00fb						; point one byte before drive/slot table
 			lda	#4								; counter (number of units)
 stv02		cmpb	a,x							; equals new value the contents of that slot?
 			beq	stv04							; yes, see if it is the same unit
