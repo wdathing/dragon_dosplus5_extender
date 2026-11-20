@@ -3436,7 +3436,22 @@ reqOK    tst   ,x
          ldb   #$19							; MO ERROR
          jmp   syserr						; system error
 autoreq  sta   <noexec        			; a is non null, autoexec
-noname   ldx   #autoname
+noname
+			IF onerom > 0						; dwone.asm's DWWrite can't send from this ROM - the plugin
+												; reads the packet off the cartridge bus, and ends the session
+												; at a fetch of autoname - so copy it to the RAM the named
+												; request is built in, and send it from there
+         ldx   #autoname
+         ldy   #namebuf-1
+         ldb   #12+2
+nonamecp lda   ,x+
+         sta   ,y+
+         decb
+         bne   nonamecp
+         ldx   #namebuf-1
+			ELSE
+         ldx   #autoname
+			ENDIF
          ldy   #12+2							; length of DW packet
          bra   reqobj
 												; named object has been mounted, proceed to read in file
@@ -3676,7 +3691,9 @@ ReadEx	puls  d,x,y,pc
 ;    Y  = checksum
 ;    U is preserved.  All accumulators are clobbered
 ; -------------------------------------------------------------------------------------------------------------------------------
-			IF becker > 0
+			IF onerom > 0						; One ROM drivewire plugin, over the ROM address bus
+			include "dwone.asm"
+			ELSIF becker > 0
 DWRead   clra                      		; clear Carry (no framing error)
          deca                    		; clear Z flag, A = timeout msb ($ff)
          tfr	cc,b
@@ -3811,7 +3828,8 @@ rxExit   leas  1,s               		; remove timeout msb from stack
 ;    Y  = 0
 ;    All others preserved
 ; -------------------------------------------------------------------------------------------------------------------------------
-			IF becker > 0
+			IF onerom > 0						; DWWrite is in dwone.asm, with DWRead
+			ELSIF becker > 0
 DWWrite  pshs  d,cc              		; preserve registers
 txByte	lda   ,x+
          sta   $ff4a
